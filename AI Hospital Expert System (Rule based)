@@ -1,0 +1,91 @@
+symptom_db = [
+    {"keywords": ["fever", "headache", "sore throat"], "department": "General Medicine", "condition": "Viral Infection"},
+    {"keywords": ["cough", "chest pain"], "department": "Pulmonology", "condition": "Bronchitis"},
+    {"keywords": ["rash", "itching"], "department": "Dermatology", "condition": "Eczema"},
+    {"keywords": ["abdominal pain", "nausea"], "department": "Gastroenterology", "condition": "Ulcer"},
+    {"keywords": ["shortness of breath", "fatigue"], "department": "Cardiology", "condition": "Heart Failure"},
+    {"keywords": ["joint pain", "swelling"], "department": "Orthopedics", "condition": "Arthritis"},
+    {"keywords": ["ear pain", "discharge"], "department": "ENT", "condition": "Ear Infection"},
+    {"keywords": ["vision problems", "headache"], "department": "Neurology", "condition": "Migraine"},
+    {"keywords": ["frequent urination", "thirst"], "department": "Endocrinology", "condition": "Diabetes"},
+]
+
+# Hospital directory
+hospitals = {
+    "City General Hospital": {
+        "departments": ["General Medicine", "Cardiology", "Neurology"],
+        "contact": "Pune, India - +91 123 456 7890"
+    },
+    "Pulse Care Clinic": {
+        "departments": ["Pulmonology", "Orthopedics"],
+        "contact": "Pune, India - +91 234 567 8901"
+    },
+    "Heart Life Hospital": {
+        "departments": ["Cardiology", "Neurology"],
+        "contact": "Pune, India - +91 345 678 9012"
+    },
+    "Skin Solutions": {
+        "departments": ["Dermatology"],
+        "contact": "Pune, India - +91 456 789 0123"
+    },
+    "Sunshine Medical Center": {
+        "departments": ["Gastroenterology", "Urology"],
+        "contact": "Pune, India - +91 567 890 1234"
+    }
+}
+
+def welcome():
+    print("       AI Hospital Expert System - Basic")
+    print("")
+
+# Rule-based prediction
+def rule_based_prediction(symptoms_input):
+    symptoms_input = symptoms_input.lower()
+    for record in symptom_db:
+        for keyword in record["keywords"]:
+            if keyword in symptoms_input:
+                return record["department"], record["condition"]
+    return "General Medicine", "General Illness"
+
+# Recommend hospitals
+def recommend_hospitals(department):
+    recommended = []
+    for name, info in hospitals.items():
+        if department in info["departments"]:
+            recommended.append(f"{name} - Contact: {info['contact']}")
+    return recommended
+
+# Main logic
+def main():
+    welcome()
+
+    # Patient details
+    name = input("👤 Enter patient's name: ")
+    age = input("📅 Enter age: ")
+    address = input("📍 Enter address: ")
+    mobile = input("📞 Enter mobile number: ")
+    symptoms = input("📝 Describe the patient's symptoms: ")
+
+    department, condition = rule_based_prediction(symptoms)
+    recommended = recommend_hospitals(department)
+
+    # Output
+    print("\n=====================  Report =====================")
+    print(f"1. Name       : {name}")
+    print(f"2. Age        : {age}")
+    print(f"3. Address    : {address}")
+    print(f"4. Mobile     : {mobile}")
+    print(f"5. Symptoms   : {symptoms}")
+    print(f"6. Department : {department}")
+    print(f"7. Condition  : {condition}")
+
+    print("\n=================  Recommended Hospitals =================")
+    if recommended:
+        for r in recommended:
+            print(r)
+    else:
+        print("No hospital found for this department.")
+    print("============================================================")
+
+if __name__ == "__main__":
+    main()
