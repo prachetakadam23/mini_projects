@@ -1,0 +1,77 @@
+#include <iostream>
+using namespace std;
+struct Node {
+    int marks;
+    Node* next;
+
+    Node(int marks) : marks(marks), next(nullptr) {}
+};
+class LinkedList {
+private:
+    Node* head;
+public:
+    LinkedList() : head(nullptr) {}
+
+    void insert(int marks) {
+        Node* newNode = new Node(marks);
+        if (head == nullptr) {
+            head = newNode;
+        } else {
+            Node* temp = head;
+            while (temp->next != nullptr) {
+                temp = temp->next;
+            }
+            temp->next = newNode;
+        }
+    }
+    double calculateAverage() {
+        if (head == nullptr) {
+            return 0.0;
+        }
+        int total = 0;
+        int count = 0;
+        Node* temp = head;
+        while (temp != nullptr) {
+            total += temp->marks;
+            count++;
+            temp = temp->next;
+        }
+        return static_cast<double>(total) / count;
+    }
+};
+int main() {
+    LinkedList termWork;
+    int ch,flg=1;
+    int numSubjects;
+    while(flg==1)
+ {
+     cout<<"\n1.Input marks \n2.Display Termwork \n3.Exit";
+     cout<<"\nEnter choice: ";
+     cin>>ch;
+     switch(ch)
+     {
+       case 1:
+    cout << "\nEnter the number of subjects: ";
+    cin >> numSubjects;
+
+    // Input marks for each subject
+    for (int i = 0; i < numSubjects; ++i) {
+        int marks;
+        cout << "\nEnter marks for subject " << i + 1 << ": ";
+        cin >> marks;
+         termWork.insert(marks);}
+           
+         break;
+     case 2:
+    {  double avg= termWork.calculateAverage();
+      cout<<"\nAverage Termwork score is: "<< avg;
+    }
+      break;
+      case 3:
+        cout<<"\n\nThank you for using Program!!";
+      flg=0; 
+   break;
+}
+}
+    return 0;
+}
