@@ -1,0 +1,11 @@
+import random
+def roll_dice(min_value, max_Value):
+   while True:
+       roll = random.randint(min_value, max_Value)
+       print("You rolled:", roll)
+       choice = input("Roll again? (y/n): ")
+       if choice.lower() != 'y':
+           break
+min_value = 1
+max_Value = 6
+roll_dice(min_value, max_Value)
