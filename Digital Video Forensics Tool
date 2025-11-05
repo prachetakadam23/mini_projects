@@ -1,0 +1,178 @@
+import cv2
+import numpy as np
+import streamlit as st
+import tempfile
+import matplotlib.pyplot as plt
+
+#
+# FUNCTION 1: Video Metadata Extraction
+#
+def extract_video_metadata(video_path):
+    cap = cv2.VideoCapture(video_path)
+    metadata = {
+        "Frame Width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        "Frame Height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        "Frame Count": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+        "Frames per Second (FPS)": cap.get(cv2.CAP_PROP_FPS),
+        "Duration (seconds)": round(cap.get(cv2.CAP_PROP_FRAME_COUNT) / cap.get(cv2.CAP_PROP_FPS), 2)
+    }
+    cap.release()
+    return metadata
+
+#
+# FUNCTION 2: Error Level Analysis (Frame Difference)
+#
+def perform_video_ela(video_path, frame_interval=10):
+    cap = cv2.VideoCapture(video_path)
+    count = 0
+
+    st_frame = st.empty()
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if count % frame_interval == 0:
+            # Compress and recompress to detect error levels
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            _, compressed = cv2.imencode('.jpg', frame, encode_param)
+            recompressed = cv2.imdecode(compressed, 1)
+            diff = cv2.absdiff(frame, recompressed)
+            diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            ela_enhanced = cv2.convertScaleAbs(diff_gray, alpha=5)  # amplify
+            st_frame.image(ela_enhanced, caption=f"Frame {count}", use_container_width=True)
+        count += 1
+    cap.release()
+
+#
+# FUNCTION 3: Histogram Analysis (Average Frame Histogram)
+#
+def plot_video_histogram(video_path, sample_interval=20):
+    cap = cv2.VideoCapture(video_path)
+    hist_sum = np.zeros((256, 3))
+    frame_count = 0
+    sampled_frames = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if frame_count % sample_interval == 0:
+            for i in range(3):
+                hist_sum[:, i] += cv2.calcHist([frame], [i], None, [256], [0, 256]).flatten()
+            sampled_frames += 1
+        frame_count += 1
+    cap.release()
+
+    if sampled_frames > 0:
+        avg_hist = hist_sum / sampled_frames
+    else:
+        avg_hist = hist_sum
+
+    plt.figure(figsize=(6, 3))
+    colors = ('b', 'g', 'r')
+    for i, col in enumerate(colors):
+        plt.plot(avg_hist[:, i], color=col)
+    plt.title("Average Color Histogram Across Frames")
+    plt.xlabel("Pixel Intensity")
+    plt.ylabel("Frequency")
+    st.pyplot(plt.gcf())
+    plt.clf()
+
+#
+# FUNCTION 4: Copy-Move Forgery Detection (Frame Similarity)
+#
+def detect_copy_move_in_video(video_path, frame_gap=15):
+    cap = cv2.VideoCapture(video_path)
+    orb = cv2.ORB_create()
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    prev_des = None
+    prev_kp = None
+    prev_frame = None
+    frame_idx = 0
+    match_counts = []
+
+    st_frame = st.empty()
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        kp, des = orb.detectAndCompute(gray, None)
+
+        if frame_idx % frame_gap == 0 and prev_des is not None and des is not None:
+            matches = bf.match(prev_des, des)
+            matches = sorted(matches, key=lambda x: x.distance)
+            match_counts.append(len(matches))
+
+            matched_img = cv2.drawMatches(prev_frame, prev_kp, frame, kp, matches[:20], None)
+            st_frame.image(matched_img, caption=f"Frame {frame_idx} | Matches: {len(matches)}", use_container_width=True)
+
+        if frame_idx % frame_gap == 0:
+            prev_frame = frame
+            prev_kp = kp
+            prev_des = des
+
+        frame_idx += 1
+
+    cap.release()
+    avg_matches = np.mean(match_counts) if match_counts else 0
+    return avg_matches
+
+#
+# STREAMLIT USER INTERFACE
+#
+def main():
+    st.set_page_config(page_title="Digital Video Forensics Tool", layout="wide")
+    st.title("Digital Video Forensics Tool")
+    st.markdown("Developed by **Soundarya, Vaibhavi, Narinder & Pracheta**")
+
+    uploaded_file = st.file_uploader("Upload a video for forensic analysis", type=["mp4", "avi", "mov", "mkv"])
+
+    if uploaded_file:
+        # Save uploaded video temporarily
+        tfile = tempfile.NamedTemporaryFile(delete=False)
+        tfile.write(uploaded_file.read())
+        video_path = tfile.name
+
+        st.video(uploaded_file)
+
+        st.sidebar.header("Choose Forensic Analysis Type")
+        option = st.sidebar.radio("Select Analysis", [
+            "Video Metadata",
+            "Error Level Analysis (ELA)",
+            "Histogram Analysis",
+            "Copy-Move Forgery Detection"
+        ])
+
+        if option == "Video Metadata":
+            st.subheader("Video Metadata:")
+            metadata = extract_video_metadata(video_path)
+            for key, value in metadata.items():
+                st.write(f"**{key}:** {value}")
+
+        elif option == "Error Level Analysis (ELA)":
+            st.subheader("Frame-Level Error Level Analysis (ELA)")
+            perform_video_ela(video_path)
+
+        elif option == "Histogram Analysis":
+            st.subheader("Average Frame Histogram")
+            plot_video_histogram(video_path)
+
+        elif option == "Copy-Move Forgery Detection":
+            st.subheader("Copy-Move Forgery Detection (Frame Similarity)")
+            avg = detect_copy_move_in_video(video_path)
+            st.info(f"Average ORB Match Count between frames: {avg:.2f}")
+            st.caption("Unusual spikes or drops in similarity may indicate tampering or splicing.")
+
+        st.sidebar.markdown("---")
+        st.sidebar.info("Developed as a Mini Project for CSDF | MES Wadia College of Engineering")
+
+        # Store temp video path to delete later if needed
+        st.session_state["temp_video"] = video_path
+
+    else:
+        st.info("Upload a video file to start analysis.")
+
+if __name__ == "__main__":
+    main()
